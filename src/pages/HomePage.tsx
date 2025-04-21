@@ -1,9 +1,8 @@
-
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
-import { ArrowRight, Video, Shield, Laptop, Users, Award, MessageSquare, HeadphonesIcon, Star } from "lucide-react";
+import { ArrowRight, Video, Shield, Laptop, Users, Award, MessageSquare, HeadphonesIcon } from "lucide-react";
 
 export default function HomePage() {
   return (
@@ -97,43 +96,6 @@ export default function HomePage() {
                 <MessageSquare className="h-12 w-12 text-primary mb-4" />
                 <h3 className="text-xl font-semibold mb-2">Chat Features</h3>
                 <p className="text-center text-muted-foreground">Built-in chat for better communication</p>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* Testimonials Section */}
-        <section className="bg-secondary py-16 md:py-24">
-          <div className="container px-4 md:px-6">
-            <div className="text-center mb-12 animate-fade-up">
-              <h2 className="text-3xl font-bold tracking-tight sm:text-4xl md:text-5xl">
-                What Our Users Say
-              </h2>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              <div className="bg-card p-6 rounded-lg shadow-sm border animate-fade-up" style={{ animationDelay: "200ms" }}>
-                <div className="flex items-center mb-4">
-                  <Star className="h-5 w-5 text-yellow-500" />
-                  <Star className="h-5 w-5 text-yellow-500" />
-                  <Star className="h-5 w-5 text-yellow-500" />
-                  <Star className="h-5 w-5 text-yellow-500" />
-                  <Star className="h-5 w-5 text-yellow-500" />
-                </div>
-                <p className="text-muted-foreground mb-4">"Perfect for our remote team meetings. The quality is excellent!"</p>
-                <p className="font-semibold">- Sarah Johnson</p>
-                <p className="text-sm text-muted-foreground">Project Manager</p>
-              </div>
-              <div className="bg-card p-6 rounded-lg shadow-sm border animate-fade-up" style={{ animationDelay: "400ms" }}>
-                <div className="flex items-center mb-4">
-                  <Star className="h-5 w-5 text-yellow-500" />
-                  <Star className="h-5 w-5 text-yellow-500" />
-                  <Star className="h-5 w-5 text-yellow-500" />
-                  <Star className="h-5 w-5 text-yellow-500" />
-                  <Star className="h-5 w-5 text-yellow-500" />
-                </div>
-                <p className="text-muted-foreground mb-4">"Easy to use and reliable. Makes online teaching a breeze!"</p>
-                <p className="font-semibold">- Michael Chen</p>
-                <p className="text-sm text-muted-foreground">Online Educator</p>
               </div>
             </div>
           </div>
