@@ -3,11 +3,17 @@ import { useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { ZegoUIKitPrebuilt } from "@zegocloud/zego-uikit-prebuilt";
 import { useAuth } from "@/components/AuthContext";
+import { Navbar } from "@/components/Navbar";
+import { Footer } from "@/components/Footer";
+import { Button } from "@/components/ui/button";
+import { ArrowLeft } from "lucide-react";
 
 export default function MeetingPage() {
   const { roomId } = useParams<{ roomId: string }>();
   const { user } = useAuth();
   const navigate = useNavigate();
+
+  const meetingLink = `${window.location.origin}/meeting/${roomId}`;
 
   useEffect(() => {
     if (!roomId) {
@@ -74,8 +80,34 @@ export default function MeetingPage() {
   }, [roomId, user, navigate]);
 
   return (
-    <div className="flex flex-col h-screen w-full bg-background">
-      <div id="meeting-container" className="flex-1"></div>
+    <div className="flex min-h-screen flex-col">
+      <Navbar />
+      <main className="flex-1 container py-4">
+        <div className="mb-8">
+          <Button 
+            variant="outline" 
+            onClick={() => navigate("/dashboard")}
+            className="mb-4"
+          >
+            <ArrowLeft className="mr-2" />
+            Back to Dashboard
+          </Button>
+          
+          <div className="mb-6 space-y-2">
+            <div className="flex items-center gap-2">
+              <span className="font-medium">Room Code:</span>
+              <span className="bg-secondary px-3 py-1 rounded">{roomId}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="font-medium">Meeting Link:</span>
+              <span className="bg-secondary px-3 py-1 rounded break-all">{meetingLink}</span>
+            </div>
+          </div>
+        </div>
+
+        <div id="meeting-container" className="rounded-lg overflow-hidden border bg-card shadow-sm"></div>
+      </main>
+      <Footer />
     </div>
   );
 }
