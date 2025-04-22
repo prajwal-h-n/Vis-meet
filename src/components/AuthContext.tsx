@@ -17,80 +17,113 @@ type AuthContextType = {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// For demo purposes, we'll simulate authentication with localStorage
+// API URL
+const API_URL = "http://localhost:5000/api";
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Check if user is already logged in
-    const userData = localStorage.getItem("zoom-lite-user");
-    if (userData) {
-      setUser(JSON.parse(userData));
+    // Check if token exists in localStorage
+    const token = localStorage.getItem("auth-token");
+    
+    if (token) {
+      // Verify token and get user data
+      fetchUserData(token);
+    } else {
+      setIsLoading(false);
     }
-    setIsLoading(false);
   }, []);
 
+  // Fetch user data with token
+  const fetchUserData = async (token: string) => {
+    try {
+      const response = await fetch(`${API_URL}/auth/user`, {
+        headers: {
+          'x-auth-token': token
+        }
+      });
+
+      if (response.ok) {
+        const userData = await response.json();
+        setUser(userData);
+      } else {
+        // If token is invalid, clear localStorage
+        localStorage.removeItem("auth-token");
+      }
+    } catch (error) {
+      console.error("Error fetching user data:", error);
+      localStorage.removeItem("auth-token");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const login = async (email: string, password: string) => {
-    // Simulate API call
     setIsLoading(true);
     
-    // For demo, check if user exists in localStorage
-    const usersData = localStorage.getItem("zoom-lite-users");
-    const users = usersData ? JSON.parse(usersData) : [];
-    
-    const foundUser = users.find(
-      (u: any) => u.email === email && u.password === password
-    );
-    
-    if (!foundUser) {
+    try {
+      const response = await fetch(`${API_URL}/auth/login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ email, password })
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Login failed');
+      }
+      
+      const data = await response.json();
+      
+      // Save token to localStorage
+      localStorage.setItem("auth-token", data.token);
+      
+      // Set user state
+      setUser(data.user);
+    } catch (error) {
+      throw error;
+    } finally {
       setIsLoading(false);
-      throw new Error("Invalid email or password");
     }
-    
-    // Don't store password in the session
-    const { password: _, ...userWithoutPassword } = foundUser;
-    
-    // Store user in localStorage
-    localStorage.setItem("zoom-lite-user", JSON.stringify(userWithoutPassword));
-    setUser(userWithoutPassword);
-    setIsLoading(false);
   };
 
   const signup = async (name: string, email: string, password: string) => {
     setIsLoading(true);
     
-    // Get existing users or initialize empty array
-    const usersData = localStorage.getItem("zoom-lite-users");
-    const users = usersData ? JSON.parse(usersData) : [];
-    
-    // Check if user already exists
-    if (users.some((u: any) => u.email === email)) {
+    try {
+      const response = await fetch(`${API_URL}/auth/register`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ name, email, password })
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Signup failed');
+      }
+      
+      const data = await response.json();
+      
+      // Save token to localStorage
+      localStorage.setItem("auth-token", data.token);
+      
+      // Set user state
+      setUser(data.user);
+    } catch (error) {
+      throw error;
+    } finally {
       setIsLoading(false);
-      throw new Error("User with this email already exists");
     }
-    
-    // Create new user
-    const newUser = {
-      id: crypto.randomUUID(),
-      name,
-      email,
-      password, // In a real app, this would be hashed
-    };
-    
-    // Add to users list
-    users.push(newUser);
-    localStorage.setItem("zoom-lite-users", JSON.stringify(users));
-    
-    // Log user in automatically after signup
-    const { password: _, ...userWithoutPassword } = newUser;
-    localStorage.setItem("zoom-lite-user", JSON.stringify(userWithoutPassword));
-    setUser(userWithoutPassword);
-    setIsLoading(false);
   };
 
   const logout = () => {
-    localStorage.removeItem("zoom-lite-user");
+    localStorage.removeItem("auth-token");
     setUser(null);
   };
 
