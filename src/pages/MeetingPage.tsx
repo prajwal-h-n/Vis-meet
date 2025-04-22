@@ -7,6 +7,7 @@ import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
+import { toast } from "sonner";
 
 export default function MeetingPage() {
   const { roomId } = useParams<{ roomId: string }>();
@@ -26,13 +27,11 @@ export default function MeetingPage() {
     if (!container) return;
 
     try {
-      // Initialize ZegoCloud - You would need to replace with your own ZegoCloud credentials
-      // This is just a placeholder for demo purposes
-      const appID = 123456789; // Replace with your actual appID from ZegoCloud
-      const serverSecret = "your-server-secret"; // Replace with your actual serverSecret
+      const appID = 1197356487;
+      const serverSecret = "ae07d4117925b5e2d80c7ccb654eb4a6";
 
       const kitToken = ZegoUIKitPrebuilt.generateKitTokenForTest(
-        appID, 
+        appID,
         serverSecret,
         roomId,
         user?.id || Date.now().toString(),
@@ -45,49 +44,52 @@ export default function MeetingPage() {
       // Join the room
       zp.joinRoom({
         container,
+        sharedLinks: [{
+          name: 'Personal link',
+          url: meetingLink,
+        }],
         scenario: {
           mode: ZegoUIKitPrebuilt.VideoConference,
         },
-      turnOnMicrophoneWhenJoining: true,
-      turnOnCameraWhenJoining: true,
-      showMyCameraToggleButton: true,
-      showMyMicrophoneToggleButton: true,
-      showAudioVideoSettingsButton: true,
-      showScreenSharingButton: true,
-      showTextChat: true,
-      maxUsers: 50,
-      layout: "Auto",
-      showLayoutButton: true,
-      onLeaveRoom: () => {
-        navigate("/dashboard");
-      },
-    });
+        turnOnMicrophoneWhenJoining: false,
+        turnOnCameraWhenJoining: false,
+        showMyCameraToggleButton: true,
+        showMyMicrophoneToggleButton: true,
+        showAudioVideoSettingsButton: true,
+        showScreenSharingButton: true,
+        showTextChat: true,
+        showUserList: true,
+        maxUsers: 50,
+        layout: "Grid",
+        showLayoutButton: true,
+        onLeaveRoom: () => {
+          navigate("/dashboard");
+        },
+      });
 
-    return () => {
-      // Clean up when component unmounts
-      try {
-        zp?.destroy();
-      } catch (error) {
-        console.error("Error destroying ZegoCloud instance:", error);
-      }
-    };
-    
+      return () => {
+        try {
+          zp?.destroy();
+        } catch (error) {
+          console.error("Error destroying ZegoCloud instance:", error);
+        }
+      };
     } catch (error) {
       console.error("Error initializing ZegoCloud:", error);
-      alert("Failed to initialize meeting. Please check your ZegoCloud credentials.");
+      toast.error("Failed to initialize meeting. Please try again.");
       navigate("/dashboard");
     }
-  }, [roomId, user, navigate]);
+  }, [roomId, user, navigate, meetingLink]);
 
   return (
-    <div className="flex min-h-screen flex-col">
+    <div className="flex min-h-screen flex-col bg-background">
       <Navbar />
       <main className="flex-1 container py-4">
         <div className="mb-8">
           <Button 
             variant="outline" 
             onClick={() => navigate("/dashboard")}
-            className="mb-4"
+            className="mb-4 hover:bg-secondary"
           >
             <ArrowLeft className="mr-2" />
             Back to Dashboard
@@ -96,16 +98,16 @@ export default function MeetingPage() {
           <div className="mb-6 space-y-2">
             <div className="flex items-center gap-2">
               <span className="font-medium">Room Code:</span>
-              <span className="bg-secondary px-3 py-1 rounded">{roomId}</span>
+              <span className="bg-secondary px-3 py-1 rounded-md">{roomId}</span>
             </div>
             <div className="flex items-center gap-2">
               <span className="font-medium">Meeting Link:</span>
-              <span className="bg-secondary px-3 py-1 rounded break-all">{meetingLink}</span>
+              <span className="bg-secondary px-3 py-1 rounded-md break-all">{meetingLink}</span>
             </div>
           </div>
         </div>
 
-        <div id="meeting-container" className="rounded-lg overflow-hidden border bg-card shadow-sm"></div>
+        <div id="meeting-container" className="rounded-lg overflow-hidden border bg-card shadow-sm h-[600px]"></div>
       </main>
       <Footer />
     </div>
