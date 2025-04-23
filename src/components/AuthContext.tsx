@@ -16,8 +16,8 @@ type AuthContextType = {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// API URL
-const API_URL = "http://localhost:5001/api";
+// API URL - Use relative URL for same-origin requests when deployed
+const API_URL = "/api";
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
