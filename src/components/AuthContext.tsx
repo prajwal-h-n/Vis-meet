@@ -16,8 +16,8 @@ type AuthContextType = {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// API URL - Using the full backend URL again
-const API_URL = "https://vis-meet-backend.onrender.com/api";
+// Use relative URL to work with our server-side proxy
+const API_URL = "/api";
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
@@ -40,7 +40,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const response = await fetch(`${API_URL}/auth/user`, {
         method: 'GET',
-        mode: 'cors',
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
@@ -71,7 +70,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       const response = await fetch(`${API_URL}/auth/login`, {
         method: 'POST',
-        mode: 'cors',
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json'
@@ -117,7 +115,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       const response = await fetch(`${API_URL}/auth/register`, {
         method: 'POST',
-        mode: 'cors',
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json'
