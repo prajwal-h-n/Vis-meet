@@ -25,7 +25,11 @@ app.use((req, res, next) => {
 
 // Create API proxy for backend requests
 app.use('/api', async (req, res) => {
-  const url = `${BACKEND_URL}/api${req.url}`;
+  // Try with the URL pattern that omits the /api prefix
+  // Example: /api/auth/login -> /auth/login
+  const urlPath = req.url; // e.g., /auth/login
+  const url = `${BACKEND_URL}${urlPath}`; 
+  
   const method = req.method;
   
   console.log(`[PROXY] ${method} request to: ${url}`);
@@ -62,11 +66,37 @@ app.use('/api', async (req, res) => {
     console.log(`[PROXY] Sending request to backend...`);
     const response = await fetch(url, fetchOptions);
     console.log(`[PROXY] Received response with status: ${response.status}`);
+
+    // If 404, try the fallback URL with /api prefix
+    if (response.status === 404) {
+      console.log(`[PROXY] 404 received, trying with /api prefix...`);
+      const fallbackUrl = `${BACKEND_URL}/api${urlPath}`;
+      console.log(`[PROXY] Fallback URL: ${fallbackUrl}`);
+      
+      const fallbackResponse = await fetch(fallbackUrl, fetchOptions);
+      console.log(`[PROXY] Fallback response status: ${fallbackResponse.status}`);
+      
+      // Use the fallback response if it's not 404
+      if (fallbackResponse.status !== 404) {
+        res.status(fallbackResponse.status);
+        try {
+          const data = await fallbackResponse.json();
+          console.log(`[PROXY] Fallback response data:`, JSON.stringify(data));
+          return res.json(data);
+        } catch (parseError) {
+          console.log(`[PROXY] Fallback response is not JSON: ${parseError.message}`);
+          return res.json({ 
+            message: `Backend server returned status ${fallbackResponse.status}`,
+            status: fallbackResponse.status
+          });
+        }
+      }
+    }
     
     // Set the status code
     res.status(response.status);
     
-    // Fix: Handle response body only once, using clone() to avoid body used already error
+    // Handle the original response
     try {
       const data = await response.json();
       console.log(`[PROXY] Response data:`, JSON.stringify(data));
@@ -77,7 +107,7 @@ app.use('/api', async (req, res) => {
       
       // For 404 and other error codes, send a structured error
       return res.json({ 
-        message: `Backend server returned status ${response.status}`,
+        message: `Backend server returned status ${response.status}. The API endpoint might not exist.`,
         status: response.status
       });
     }

@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect } from "react";
+import ServerStatusAlert from "./ServerStatusAlert";
 
 type User = {
   id: string;
@@ -12,6 +13,8 @@ type AuthContextType = {
   signup: (name: string, email: string, password: string) => Promise<void>;
   logout: () => void;
   isLoading: boolean;
+  isServerAvailable: boolean;
+  serverError: string | null;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -22,8 +25,13 @@ const API_URL = "/api";
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isServerAvailable, setIsServerAvailable] = useState(true);
+  const [serverError, setServerError] = useState<string | null>(null);
 
   useEffect(() => {
+    // Check server availability
+    checkServerAvailability();
+    
     // Check if token exists in localStorage
     const token = localStorage.getItem("auth-token");
     
@@ -34,6 +42,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setIsLoading(false);
     }
   }, []);
+
+  // Check if the server is available
+  const checkServerAvailability = async () => {
+    try {
+      const response = await fetch(`${API_URL}/auth/login`, {
+        method: 'HEAD',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (response.status === 404) {
+        setIsServerAvailable(false);
+        setServerError("Backend server is not available. Authentication features will not work.");
+      } else {
+        setIsServerAvailable(true);
+        setServerError(null);
+      }
+    } catch (error) {
+      console.error("Server availability check failed:", error);
+      setIsServerAvailable(false);
+      setServerError("Could not connect to the backend server.");
+    }
+  };
 
   // Fetch user data with token
   const fetchUserData = async (token: string) => {
@@ -65,6 +97,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const login = async (email: string, password: string) => {
     setIsLoading(true);
     
+    // Check server availability before attempting login
+    if (!isServerAvailable) {
+      setIsLoading(false);
+      throw new Error("Backend server is not available. Please try again later.");
+    }
+    
     try {
       console.log("Attempting login with:", { email });
       
@@ -79,26 +117,35 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       console.log("Login response status:", response.status);
       
+      const responseData = await response.json();
+      console.log("Login response data:", responseData);
+      
       if (!response.ok) {
         if (response.status === 401) {
           throw new Error('Invalid credentials');
-        }
-        try {
-          const errorData = await response.json();
-          throw new Error(errorData.message || 'Login failed');
-        } catch (e) {
-          throw new Error('Login failed - server error');
+        } else if (response.status === 404) {
+          setIsServerAvailable(false);
+          throw new Error('Login endpoint not found. Backend server may be unavailable.');
+        } else if (responseData && responseData.message) {
+          throw new Error(responseData.message);
+        } else {
+          throw new Error(`Login failed - server returned ${response.status}`);
         }
       }
       
-      const data = await response.json();
-      console.log("Login successful, received data:", { userId: data.user?.id });
+      // If response was OK but doesn't have expected data structure
+      if (!responseData || !responseData.token) {
+        console.error("Invalid response format:", responseData);
+        throw new Error('Invalid server response format');
+      }
+      
+      console.log("Login successful, received data:", { userId: responseData.user?.id });
       
       // Save token to localStorage
-      localStorage.setItem("auth-token", data.token);
+      localStorage.setItem("auth-token", responseData.token);
       
       // Set user state
-      setUser(data.user);
+      setUser(responseData.user);
     } catch (error) {
       console.error("Login error:", error);
       throw error;
@@ -109,6 +156,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signup = async (name: string, email: string, password: string) => {
     setIsLoading(true);
+    
+    // Check server availability before attempting signup
+    if (!isServerAvailable) {
+      setIsLoading(false);
+      throw new Error("Backend server is not available. Please try again later.");
+    }
     
     try {
       console.log("Attempting signup with:", { name, email });
@@ -124,23 +177,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       console.log("Signup response status:", response.status);
       
+      const responseData = await response.json();
+      console.log("Signup response data:", responseData);
+      
       if (!response.ok) {
-        try {
-          const errorData = await response.json();
-          throw new Error(errorData.message || 'Signup failed');
-        } catch (e) {
-          throw new Error('Signup failed - server error');
+        if (response.status === 404) {
+          setIsServerAvailable(false);
+          throw new Error('Registration endpoint not found. Backend server may be unavailable.');
+        } else if (responseData && responseData.message) {
+          throw new Error(responseData.message);
+        } else {
+          throw new Error(`Signup failed - server returned ${response.status}`);
         }
       }
       
-      const data = await response.json();
-      console.log("Signup successful, received data:", { userId: data.user?.id });
+      // If response was OK but doesn't have expected data structure
+      if (!responseData || !responseData.token) {
+        console.error("Invalid response format:", responseData);
+        throw new Error('Invalid server response format');
+      }
+      
+      console.log("Signup successful, received data:", { userId: responseData.user?.id });
       
       // Save token to localStorage
-      localStorage.setItem("auth-token", data.token);
+      localStorage.setItem("auth-token", responseData.token);
       
       // Set user state
-      setUser(data.user);
+      setUser(responseData.user);
     } catch (error) {
       console.error("Signup error:", error);
       throw error;
@@ -155,7 +218,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, signup, logout, isLoading }}>
+    <AuthContext.Provider value={{ 
+      user, 
+      login, 
+      signup, 
+      logout, 
+      isLoading,
+      isServerAvailable,
+      serverError
+    }}>
+      {!isServerAvailable && <ServerStatusAlert />}
       {children}
     </AuthContext.Provider>
   );
@@ -168,3 +240,4 @@ export function useAuth() {
   }
   return context;
 }
+
