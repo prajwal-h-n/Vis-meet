@@ -25,7 +25,7 @@ app.use((req, res, next) => {
 
 // Create API proxy for backend requests
 app.use('/api', async (req, res) => {
-  const url = `${BACKEND_URL}${req.url}`;
+  const url = `${BACKEND_URL}/api${req.url}`;
   const method = req.method;
   
   console.log(`[PROXY] ${method} request to: ${url}`);
@@ -66,17 +66,20 @@ app.use('/api', async (req, res) => {
     // Set the status code
     res.status(response.status);
     
-    // Try to parse the response as JSON
+    // Fix: Handle response body only once, using clone() to avoid body used already error
     try {
       const data = await response.json();
       console.log(`[PROXY] Response data:`, JSON.stringify(data));
       return res.json(data);
     } catch (parseError) {
-      // If not JSON, try to get text
-      console.log(`[PROXY] Response is not JSON, fetching as text`);
-      const text = await response.text();
-      console.log(`[PROXY] Response text:`, text);
-      return res.send(text);
+      // If the response is not JSON, it's likely text or empty
+      console.log(`[PROXY] Response is not JSON: ${parseError.message}`);
+      
+      // For 404 and other error codes, send a structured error
+      return res.json({ 
+        message: `Backend server returned status ${response.status}`,
+        status: response.status
+      });
     }
   } catch (error) {
     console.error(`[PROXY] Error:`, error);
