@@ -145,10 +145,21 @@ app.use('/api', async (req, res) => {
 });
 
 // Serve static files from the dist directory
-app.use(express.static(join(__dirname, 'dist')));
+app.use(express.static(join(__dirname, 'dist'), {
+  maxAge: '1d',
+  fallthrough: true, // Allow falling through to next middleware if file not found
+  index: 'index.html'
+}));
+
+// Add debugging for static file requests
+app.use((req, res, next) => {
+  console.log(`[STATIC] Request for static file: ${req.path}`);
+  next();
+});
 
 // Handle SPA routing - send all requests to index.html
 app.get('*', (req, res) => {
+  console.log(`[SPA] Serving index.html for path: ${req.path}`);
   res.sendFile(join(__dirname, 'dist', 'index.html'));
 });
 

@@ -22,6 +22,21 @@ export USE_MOCK_BACKEND=true
 echo "USE_MOCK_BACKEND: $USE_MOCK_BACKEND"
 echo "=============================="
 
+# Check if the dist directory exists
+echo "======== CHECKING DIST DIRECTORY ========"
+if [ -d "dist" ]; then
+  echo "Dist directory exists. Contents:"
+  ls -la dist/
+  echo "Index.html content check:"
+  head -n 20 dist/index.html 2>/dev/null || echo "index.html not found or empty"
+else
+  echo "WARNING: Dist directory doesn't exist! Frontend files might be missing."
+  echo "Current directory: $(pwd)"
+  echo "Contents:"
+  ls -la
+fi
+echo "========================================"
+
 # Function to kill background processes on script exit
 cleanup() {
   echo "Shutting down all processes..."
