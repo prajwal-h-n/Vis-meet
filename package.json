@@ -4,7 +4,8 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "node --max_old_space_size=2048 ./node_modules/vite/bin/vite.js",
+    "start": "node --max_old_space_size=2048 ./node_modules/vite/bin/vite.js preview",
     "build": "npm install && NODE_ENV=production node --max_old_space_size=2048 ./node_modules/vite/bin/vite.js build",
     "build:dev": "vite build --mode development",
     "build:render": "npm install && npm run build",
