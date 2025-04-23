@@ -11,9 +11,15 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// CORS configuration - more permissive to solve the issue
+// Add request logging middleware
+app.use((req, res, next) => {
+  console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
+  next();
+});
+
+// CORS configuration - allow all origins for testing
 app.use(cors({
-  origin: ["https://vis-meet-1.onrender.com", "http://localhost:3000", "http://localhost:5173", "http://localhost:8080"],
+  origin: '*',
   credentials: true,
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "x-auth-token", "Authorization", "X-Requested-With", "Accept"],
@@ -36,6 +42,17 @@ app.use('/api/auth', authRoutes);
 // Basic route
 app.get('/', (req, res) => {
   res.send('Visual-Meet API is running');
+});
+
+// Simple health check route
+app.get('/health', (req, res) => {
+  res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
+// Error handling middleware
+app.use((err, req, res, next) => {
+  console.error(err.stack);
+  res.status(500).json({ message: 'Something went wrong!' });
 });
 
 // Start server

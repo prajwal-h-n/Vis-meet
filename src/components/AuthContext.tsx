@@ -39,7 +39,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const fetchUserData = async (token: string) => {
     try {
       const response = await fetch(`${API_URL}/auth/user`, {
+        method: 'GET',
+        credentials: 'include',
         headers: {
+          'Content-Type': 'application/json',
           'x-auth-token': token
         }
       });
@@ -65,15 +68,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const response = await fetch(`${API_URL}/auth/login`, {
         method: 'POST',
+        credentials: 'include',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
         },
         body: JSON.stringify({ email, password })
       });
       
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Login failed');
+        if (response.status === 401) {
+          throw new Error('Invalid credentials');
+        }
+        try {
+          const errorData = await response.json();
+          throw new Error(errorData.message || 'Login failed');
+        } catch (e) {
+          throw new Error('Login failed - server error');
+        }
       }
       
       const data = await response.json();
@@ -84,6 +96,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Set user state
       setUser(data.user);
     } catch (error) {
+      console.error("Login error:", error);
       throw error;
     } finally {
       setIsLoading(false);
@@ -96,15 +109,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const response = await fetch(`${API_URL}/auth/register`, {
         method: 'POST',
+        credentials: 'include',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
         },
         body: JSON.stringify({ name, email, password })
       });
       
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Signup failed');
+        try {
+          const errorData = await response.json();
+          throw new Error(errorData.message || 'Signup failed');
+        } catch (e) {
+          throw new Error('Signup failed - server error');
+        }
       }
       
       const data = await response.json();
@@ -115,6 +134,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Set user state
       setUser(data.user);
     } catch (error) {
+      console.error("Signup error:", error);
       throw error;
     } finally {
       setIsLoading(false);
