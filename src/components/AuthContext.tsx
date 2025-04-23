@@ -16,8 +16,8 @@ type AuthContextType = {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// API URL - Use relative URL for same-origin requests when deployed
-const API_URL = "/api";
+// API URL - Use your actual deployed backend URL
+const API_URL = "https://vis-meet-backend.onrender.com/api";
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
