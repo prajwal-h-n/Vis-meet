@@ -8,12 +8,31 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 const app = express();
+// For actual server port
 const PORT = process.env.PORT || 8080;
+// For mock backend port if running locally
+const MOCK_PORT = process.env.MOCK_PORT || 5001;
+
+// Log environment variables
+console.log('[SERVER] Environment:', {
+  port: process.env.PORT,
+  useMockBackend: process.env.USE_MOCK_BACKEND,
+  nodeEnv: process.env.NODE_ENV
+});
 
 // Configure backend URL based on environment
-const BACKEND_URL = process.env.USE_MOCK_BACKEND 
-  ? 'http://localhost:5001'  // Use local mock backend
-  : 'https://vis-meet-backend.onrender.com'; // Use remote backend
+let BACKEND_URL;
+if (process.env.USE_MOCK_BACKEND === 'true') {
+  // If we're running in Render with a single process, the mock backend will be on the same port
+  if (process.env.RENDER) {
+    BACKEND_URL = `http://localhost:${PORT}`;
+  } else {
+    // Otherwise use the mock port for local development
+    BACKEND_URL = `http://localhost:${MOCK_PORT}`;
+  }
+} else {
+  BACKEND_URL = 'https://vis-meet-backend.onrender.com';
+}
 
 console.log(`[SERVER] Using backend URL: ${BACKEND_URL}`);
 

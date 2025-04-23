@@ -7,7 +7,15 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 const app = express();
-const PORT = process.env.PORT || 5001;
+// Use a different port if MOCK_PORT is specified, otherwise fallback to PORT or 5001
+const PORT = process.env.MOCK_PORT || process.env.PORT || 5001;
+
+// Log environment info
+console.log(`[MOCK-BACKEND] Environment:`, {
+  mockPort: process.env.MOCK_PORT,
+  port: process.env.PORT,
+  nodeEnv: process.env.NODE_ENV
+});
 
 // Mock user database
 const users = [
