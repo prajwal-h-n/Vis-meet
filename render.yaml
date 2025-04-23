@@ -1,0 +1,26 @@
+services:
+  - type: web
+    name: vis-meet-frontend
+    env: node
+    buildCommand: npm install && npm run build
+    startCommand: npm run start
+    envVars:
+      - key: NODE_VERSION
+        value: 20.x
+    autoDeploy: true
+
+  - type: web
+    name: vis-meet-backend
+    env: node
+    buildCommand: cd backend && npm install
+    startCommand: cd backend && npm start
+    envVars:
+      - key: NODE_VERSION
+        value: 20.x
+      - key: MONGODB_URI
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: PORT
+        value: 10000
+    autoDeploy: true 
