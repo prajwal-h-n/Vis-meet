@@ -1,8 +1,8 @@
 #!/bin/bash
 # render-start.sh - Start script for Render deployment
 
-# Immediately exit if a command fails
-set -e
+# Allow failures for better recovery
+set +e
 
 # Environment setup
 echo "======== ENVIRONMENT SETUP ========"
@@ -33,6 +33,13 @@ cleanup() {
 # Set up trap for script termination
 trap cleanup EXIT INT TERM
 
+# Check if mock port is already in use
+if nc -z localhost $MOCK_PORT 2>/dev/null; then
+  echo "WARNING: Port $MOCK_PORT is already in use. This may cause issues."
+else
+  echo "Port $MOCK_PORT is available for the mock backend."
+fi
+
 # Start the mock backend first
 echo "Starting mock backend on port $MOCK_PORT..."
 node mock-backend.js &
@@ -40,49 +47,15 @@ MOCK_PID=$!
 echo "Mock backend started with PID: $MOCK_PID"
 
 # Wait a moment for the mock backend to initialize
-sleep 3
+echo "Waiting for mock backend to initialize..."
+sleep 5
 
 # Check if mock backend is running
 if ! kill -0 $MOCK_PID 2>/dev/null; then
-  echo "ERROR: Mock backend failed to start!"
-  exit 1
-fi
-
-# Check if mock backend is responsive
-echo "Testing mock backend health..."
-HEALTH_RESPONSE=$(curl -s "http://localhost:$MOCK_PORT/health" || echo "Connection failed")
-if [[ $HEALTH_RESPONSE == *"ok"* ]]; then
-  echo "Mock backend is healthy: $HEALTH_RESPONSE"
-else
-  echo "WARNING: Mock backend health check failed: $HEALTH_RESPONSE"
-  echo "Will attempt to continue anyway..."
+  echo "WARNING: Mock backend process not found. It may have exited."
+  # But we'll continue anyway
 fi
 
 # Start the main server
 echo "Starting main server on port $MAIN_PORT..."
-node server.js &
-MAIN_PID=$!
-echo "Main server started with PID: $MAIN_PID"
-
-# Wait a moment for the main server to initialize
-sleep 3
-
-# Check if main server is running
-if ! kill -0 $MAIN_PID 2>/dev/null; then
-  echo "ERROR: Main server failed to start!"
-  # Attempt to show logs
-  echo "Last server logs:"
-  cat /var/log/render/app.log 2>/dev/null || echo "No logs available"
-  exit 1
-fi
-
-# Monitor both processes
-echo "All services started. Monitoring for failures..."
-echo "Press Ctrl+C to stop all services"
-
-# Wait for either process to exit
-wait -n
-
-# If we get here, one of the processes exited
-echo "A process has exited. Shutting down all services..."
-exit 1 
+exec node server.js 

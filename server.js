@@ -93,7 +93,16 @@ app.use('/api', async (req, res) => {
       fetchOptions.body = JSON.stringify(req.body);
     }
     
-    // Make the fetch request
+    // Special handling for HEAD requests - don't try to parse the response
+    if (method === 'HEAD') {
+      console.log(`[PROXY] Handling HEAD request to: ${url}`);
+      const response = await fetch(url, fetchOptions);
+      console.log(`[PROXY] HEAD response status: ${response.status}`);
+      res.status(response.status).end();
+      return;
+    }
+    
+    // Make the fetch request for non-HEAD methods
     console.log(`[PROXY] Sending request to backend...`);
     const response = await fetch(url, fetchOptions);
     console.log(`[PROXY] Received response with status: ${response.status}`);
@@ -101,34 +110,33 @@ app.use('/api', async (req, res) => {
     // Set the status code
     res.status(response.status);
     
-    // Handle the response
+    // For empty responses or responses that can't be JSON-parsed, return a basic object
+    if (response.headers.get('content-length') === '0' || 
+        !response.headers.get('content-type')?.includes('json')) {
+      console.log(`[PROXY] Non-JSON or empty response, returning simple status`);
+      return res.json({
+        status: response.status,
+        message: response.status === 200 ? 'OK' : `Backend returned status ${response.status}`
+      });
+    }
+    
+    // Try to parse as JSON for normal responses
     try {
       const data = await response.json();
       console.log(`[PROXY] Response data:`, JSON.stringify(data));
       return res.json(data);
     } catch (parseError) {
-      // If the response is not JSON, it's likely text or empty
-      console.log(`[PROXY] Response is not JSON: ${parseError.message}`);
-      
-      try {
-        const text = await response.text();
-        if (text) {
-          return res.send(text);
-        }
-      } catch (textError) {
-        console.error(`[PROXY] Error getting response text:`, textError);
-      }
-      
-      // For 404 and other error codes, send a structured error
-      return res.json({ 
-        message: `Backend server returned status ${response.status}. The API endpoint might not exist.`,
-        status: response.status
+      console.log(`[PROXY] Error parsing response as JSON: ${parseError.message}`);
+      // Return a simple status-based response
+      return res.json({
+        status: response.status,
+        message: `Backend returned status ${response.status} with invalid JSON`
       });
     }
   } catch (error) {
-    console.error(`[PROXY] Error:`, error);
+    console.error(`[PROXY] Network error:`, error);
     console.error(`[PROXY] Error stack:`, error.stack);
-    return res.status(500).json({ 
+    return res.status(502).json({ 
       message: 'Error connecting to backend server', 
       error: error.message,
       stack: process.env.NODE_ENV !== 'production' ? error.stack : undefined

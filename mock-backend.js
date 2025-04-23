@@ -41,7 +41,7 @@ app.use((req, res, next) => {
 // CORS headers
 app.use((req, res, next) => {
   res.header('Access-Control-Allow-Origin', '*');
-  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, HEAD');
   res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, x-auth-token, Authorization');
   res.header('Access-Control-Allow-Credentials', 'true');
   res.header('Access-Control-Expose-Headers', 'x-auth-token');
@@ -63,6 +63,22 @@ app.use((err, req, res, next) => {
 const generateToken = (userId) => {
   return crypto.randomBytes(64).toString('hex');
 };
+
+// Handle HEAD requests for auth endpoints - these are used to check availability
+app.head('/api/auth/login', (req, res) => {
+  console.log('[MOCK-BACKEND] Received health check request for login endpoint');
+  res.status(200).end();
+});
+
+app.head('/api/auth/register', (req, res) => {
+  console.log('[MOCK-BACKEND] Received health check request for register endpoint');
+  res.status(200).end();
+});
+
+app.head('/api/auth/user', (req, res) => {
+  console.log('[MOCK-BACKEND] Received health check request for user endpoint');
+  res.status(200).end();
+});
 
 // Auth routes
 app.post('/api/auth/login', (req, res) => {
@@ -186,4 +202,4 @@ const server = app.listen(MOCK_PORT, () => {
   } else {
     console.error('[MOCK-BACKEND] Server error:', err);
   }
-}); 
+});
