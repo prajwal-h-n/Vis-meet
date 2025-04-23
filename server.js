@@ -9,32 +9,29 @@ const __dirname = dirname(__filename);
 
 const app = express();
 // For actual server port
-const PORT = process.env.PORT || 8080;
-// For mock backend port if running locally
-const MOCK_PORT = process.env.MOCK_PORT || 5001;
+const PORT = parseInt(process.env.PORT || '8080');
+// For mock backend port: always use main port + 1
+const MOCK_PORT = parseInt(process.env.MOCK_PORT || (PORT + 1).toString());
 
 // Log environment variables
 console.log('[SERVER] Environment:', {
-  port: process.env.PORT,
+  port: PORT,
+  mockPort: MOCK_PORT,
   useMockBackend: process.env.USE_MOCK_BACKEND,
+  render: process.env.RENDER,
   nodeEnv: process.env.NODE_ENV
 });
 
 // Configure backend URL based on environment
 let BACKEND_URL;
 if (process.env.USE_MOCK_BACKEND === 'true') {
-  // If we're running in Render with a single process, the mock backend will be on the same port
-  if (process.env.RENDER) {
-    BACKEND_URL = `http://localhost:${PORT}`;
-  } else {
-    // Otherwise use the mock port for local development
-    BACKEND_URL = `http://localhost:${MOCK_PORT}`;
-  }
+  // Always use localhost with the mock port
+  BACKEND_URL = `http://localhost:${MOCK_PORT}`;
+  console.log(`[SERVER] Using local mock backend at ${BACKEND_URL}`);
 } else {
   BACKEND_URL = 'https://vis-meet-backend.onrender.com';
+  console.log(`[SERVER] Using remote backend at ${BACKEND_URL}`);
 }
-
-console.log(`[SERVER] Using backend URL: ${BACKEND_URL}`);
 
 // Parse JSON request bodies
 app.use(express.json());
@@ -46,6 +43,16 @@ app.use(compression());
 app.use((req, res, next) => {
   console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
   next();
+});
+
+// Health check endpoint
+app.get('/health', (req, res) => {
+  res.status(200).json({ 
+    status: 'ok', 
+    message: 'Frontend server is running',
+    timestamp: new Date().toISOString(),
+    backendUrl: BACKEND_URL
+  });
 });
 
 // Create API proxy for backend requests
@@ -103,6 +110,15 @@ app.use('/api', async (req, res) => {
       // If the response is not JSON, it's likely text or empty
       console.log(`[PROXY] Response is not JSON: ${parseError.message}`);
       
+      try {
+        const text = await response.text();
+        if (text) {
+          return res.send(text);
+        }
+      } catch (textError) {
+        console.error(`[PROXY] Error getting response text:`, textError);
+      }
+      
       // For 404 and other error codes, send a structured error
       return res.json({ 
         message: `Backend server returned status ${response.status}. The API endpoint might not exist.`,
@@ -138,6 +154,25 @@ app.use((err, req, res, next) => {
   });
 });
 
-app.listen(PORT, () => {
+// Handle uncaught exceptions and unhandled rejections
+process.on('uncaughtException', (err) => {
+  console.error('[SERVER] Uncaught Exception:', err);
+  // Don't exit the process as it would shut down the server
+});
+
+process.on('unhandledRejection', (err) => {
+  console.error('[SERVER] Unhandled Promise Rejection:', err);
+  // Don't exit the process as it would shut down the server
+});
+
+// Start the server with error handling
+const server = app.listen(PORT, () => {
   console.log(`[SERVER] Frontend server running on port ${PORT}`);
+}).on('error', (err) => {
+  if (err.code === 'EADDRINUSE') {
+    console.error(`[SERVER] Port ${PORT} is already in use. Cannot start server.`);
+    process.exit(1);
+  } else {
+    console.error('[SERVER] Server error:', err);
+  }
 }); 

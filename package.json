@@ -9,11 +9,11 @@
   "scripts": {
     "dev": "node --max_old_space_size=2048 ./node_modules/vite/bin/vite.js",
     "start": "node server.js",
-    "mock-backend": "node mock-backend.js",
-    "mock": "node mock-backend.js & node server.js",
+    "start:mock-backend": "node mock-backend.js",
+    "start:render": "./render-start.sh",
     "build": "npm install && NODE_ENV=production node --max_old_space_size=2048 ./node_modules/vite/bin/vite.js build",
     "build:dev": "vite build --mode development",
-    "build:render": "npm install && npm run build",
+    "build:render": "npm install && npm run build && chmod +x render-start.sh",
     "lint": "eslint .",
     "preview": "vite preview"
   },
