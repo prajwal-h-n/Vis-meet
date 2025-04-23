@@ -9,7 +9,13 @@ const __dirname = dirname(__filename);
 
 const app = express();
 const PORT = process.env.PORT || 8080;
-const BACKEND_URL = 'https://vis-meet-backend.onrender.com';
+
+// Configure backend URL based on environment
+const BACKEND_URL = process.env.USE_MOCK_BACKEND 
+  ? 'http://localhost:5001'  // Use local mock backend
+  : 'https://vis-meet-backend.onrender.com'; // Use remote backend
+
+console.log(`[SERVER] Using backend URL: ${BACKEND_URL}`);
 
 // Parse JSON request bodies
 app.use(express.json());
@@ -25,10 +31,9 @@ app.use((req, res, next) => {
 
 // Create API proxy for backend requests
 app.use('/api', async (req, res) => {
-  // Try with the URL pattern that omits the /api prefix
-  // Example: /api/auth/login -> /auth/login
+  // Try with the URL pattern that includes /api prefix in the path
   const urlPath = req.url; // e.g., /auth/login
-  const url = `${BACKEND_URL}${urlPath}`; 
+  const url = `${BACKEND_URL}/api${urlPath}`; 
   
   const method = req.method;
   
@@ -67,36 +72,10 @@ app.use('/api', async (req, res) => {
     const response = await fetch(url, fetchOptions);
     console.log(`[PROXY] Received response with status: ${response.status}`);
 
-    // If 404, try the fallback URL with /api prefix
-    if (response.status === 404) {
-      console.log(`[PROXY] 404 received, trying with /api prefix...`);
-      const fallbackUrl = `${BACKEND_URL}/api${urlPath}`;
-      console.log(`[PROXY] Fallback URL: ${fallbackUrl}`);
-      
-      const fallbackResponse = await fetch(fallbackUrl, fetchOptions);
-      console.log(`[PROXY] Fallback response status: ${fallbackResponse.status}`);
-      
-      // Use the fallback response if it's not 404
-      if (fallbackResponse.status !== 404) {
-        res.status(fallbackResponse.status);
-        try {
-          const data = await fallbackResponse.json();
-          console.log(`[PROXY] Fallback response data:`, JSON.stringify(data));
-          return res.json(data);
-        } catch (parseError) {
-          console.log(`[PROXY] Fallback response is not JSON: ${parseError.message}`);
-          return res.json({ 
-            message: `Backend server returned status ${fallbackResponse.status}`,
-            status: fallbackResponse.status
-          });
-        }
-      }
-    }
-    
     // Set the status code
     res.status(response.status);
     
-    // Handle the original response
+    // Handle the response
     try {
       const data = await response.json();
       console.log(`[PROXY] Response data:`, JSON.stringify(data));

@@ -25,8 +25,9 @@ const API_URL = "/api";
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [isServerAvailable, setIsServerAvailable] = useState(true);
+  const [isServerAvailable, setIsServerAvailable] = useState(true); // Assume server is available initially
   const [serverError, setServerError] = useState<string | null>(null);
+  const [checkedServer, setCheckedServer] = useState(false);
 
   useEffect(() => {
     // Check server availability
@@ -46,23 +47,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Check if the server is available
   const checkServerAvailability = async () => {
     try {
+      console.log("Checking server availability...");
       const response = await fetch(`${API_URL}/auth/login`, {
         method: 'HEAD',
         headers: {
           'Content-Type': 'application/json'
         }
+      }).catch(error => {
+        console.error("Server check request failed:", error);
+        return { ok: false, status: 0 };
       });
       
-      if (response.status === 404) {
-        setIsServerAvailable(false);
+      const isAvailable = response.ok || response.status !== 404;
+      console.log(`Server availability check: ${isAvailable ? 'Available' : 'Not available'} (status: ${response.status})`);
+      
+      setIsServerAvailable(isAvailable);
+      setCheckedServer(true);
+      
+      if (!isAvailable) {
         setServerError("Backend server is not available. Authentication features will not work.");
       } else {
-        setIsServerAvailable(true);
         setServerError(null);
       }
     } catch (error) {
       console.error("Server availability check failed:", error);
       setIsServerAvailable(false);
+      setCheckedServer(true);
       setServerError("Could not connect to the backend server.");
     }
   };
@@ -98,7 +108,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setIsLoading(true);
     
     // Check server availability before attempting login
-    if (!isServerAvailable) {
+    if (!isServerAvailable && checkedServer) {
       setIsLoading(false);
       throw new Error("Backend server is not available. Please try again later.");
     }
@@ -116,6 +126,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       });
       
       console.log("Login response status:", response.status);
+      
+      // If we got a response, the server is available
+      setIsServerAvailable(true);
+      setCheckedServer(true);
       
       const responseData = await response.json();
       console.log("Login response data:", responseData);
@@ -148,6 +162,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(responseData.user);
     } catch (error) {
       console.error("Login error:", error);
+      
+      // Check if error is a network error, indicating server is not available
+      if (error instanceof TypeError && error.message.includes('fetch')) {
+        setIsServerAvailable(false);
+        setServerError("Could not connect to the backend server.");
+      }
+      
       throw error;
     } finally {
       setIsLoading(false);
@@ -158,7 +179,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setIsLoading(true);
     
     // Check server availability before attempting signup
-    if (!isServerAvailable) {
+    if (!isServerAvailable && checkedServer) {
       setIsLoading(false);
       throw new Error("Backend server is not available. Please try again later.");
     }
@@ -176,6 +197,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       });
       
       console.log("Signup response status:", response.status);
+      
+      // If we got a response, the server is available
+      setIsServerAvailable(true);
+      setCheckedServer(true);
       
       const responseData = await response.json();
       console.log("Signup response data:", responseData);
@@ -206,6 +231,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(responseData.user);
     } catch (error) {
       console.error("Signup error:", error);
+      
+      // Check if error is a network error, indicating server is not available
+      if (error instanceof TypeError && error.message.includes('fetch')) {
+        setIsServerAvailable(false);
+        setServerError("Could not connect to the backend server.");
+      }
+      
       throw error;
     } finally {
       setIsLoading(false);
@@ -227,7 +259,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       isServerAvailable,
       serverError
     }}>
-      {!isServerAvailable && <ServerStatusAlert />}
+      {!isServerAvailable && checkedServer && <ServerStatusAlert />}
       {children}
     </AuthContext.Provider>
   );
