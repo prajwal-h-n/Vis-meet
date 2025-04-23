@@ -16,8 +16,8 @@ type AuthContextType = {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// API URL - Use your actual deployed backend URL
-const API_URL = "https://vis-meet-backend.onrender.com/api";
+// API URL - Using relative URL to leverage the proxy in vite.config.ts
+const API_URL = "/api";
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
@@ -40,9 +40,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const response = await fetch(`${API_URL}/auth/user`, {
         method: 'GET',
+        mode: 'cors',
         credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
+          'Accept': 'application/json',
           'x-auth-token': token
         }
       });
@@ -66,8 +68,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setIsLoading(true);
     
     try {
+      console.log("Attempting login with:", { email });
+      
       const response = await fetch(`${API_URL}/auth/login`, {
         method: 'POST',
+        mode: 'cors',
         credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
@@ -75,6 +80,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         },
         body: JSON.stringify({ email, password })
       });
+      
+      console.log("Login response status:", response.status);
       
       if (!response.ok) {
         if (response.status === 401) {
@@ -89,6 +96,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
       
       const data = await response.json();
+      console.log("Login successful, received data:", { userId: data.user?.id });
       
       // Save token to localStorage
       localStorage.setItem("auth-token", data.token);
@@ -107,8 +115,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setIsLoading(true);
     
     try {
+      console.log("Attempting signup with:", { name, email });
+      
       const response = await fetch(`${API_URL}/auth/register`, {
         method: 'POST',
+        mode: 'cors',
         credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
@@ -116,6 +127,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         },
         body: JSON.stringify({ name, email, password })
       });
+      
+      console.log("Signup response status:", response.status);
       
       if (!response.ok) {
         try {
@@ -127,6 +140,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
       
       const data = await response.json();
+      console.log("Signup successful, received data:", { userId: data.user?.id });
       
       // Save token to localStorage
       localStorage.setItem("auth-token", data.token);

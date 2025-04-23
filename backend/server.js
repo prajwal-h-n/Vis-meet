@@ -17,17 +17,30 @@ app.use((req, res, next) => {
   next();
 });
 
-// CORS configuration - allow all origins for testing
+// Add CORS headers manually to ensure they're set
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, x-auth-token, Authorization');
+  res.header('Access-Control-Allow-Credentials', 'true');
+  res.header('Access-Control-Expose-Headers', 'x-auth-token');
+  
+  // Handle preflight requests
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+  
+  next();
+});
+
+// Standard CORS middleware as fallback
 app.use(cors({
   origin: '*',
   credentials: true,
-  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "x-auth-token", "Authorization", "X-Requested-With", "Accept"],
-  exposedHeaders: ["x-auth-token"]
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'x-auth-token', 'Authorization', 'X-Requested-With', 'Accept'],
+  exposedHeaders: ['x-auth-token']
 }));
-
-// Pre-flight OPTIONS requests
-app.options('*', cors());
 
 app.use(express.json());
 
