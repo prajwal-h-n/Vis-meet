@@ -17,59 +17,75 @@ app.use(express.json());
 // Compress all responses
 app.use(compression());
 
+// Add request logging middleware
+app.use((req, res, next) => {
+  console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
+  next();
+});
+
 // Create API proxy for backend requests
 app.use('/api', async (req, res) => {
   const url = `${BACKEND_URL}${req.url}`;
   const method = req.method;
   
-  console.log(`Proxying ${method} request to: ${url}`);
+  console.log(`[PROXY] ${method} request to: ${url}`);
+  if (req.body) {
+    console.log(`[PROXY] Request body:`, JSON.stringify(req.body));
+  }
   
   try {
-    const headers = {};
+    // Create a clean headers object
+    const headers = {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json'
+    };
     
-    // Copy only specific headers that we need
-    if (req.headers['content-type']) {
-      headers['Content-Type'] = req.headers['content-type'];
-    } else {
-      headers['Content-Type'] = 'application/json';
-    }
-    
+    // Copy auth header if present
     if (req.headers['x-auth-token']) {
       headers['x-auth-token'] = req.headers['x-auth-token'];
     }
     
-    // Get the request body if it exists
+    console.log(`[PROXY] Request headers:`, JSON.stringify(headers));
+    
+    // Set up fetch options
     const fetchOptions = {
       method: method,
       headers: headers
     };
     
+    // Add body for relevant methods
     if (['POST', 'PUT', 'PATCH'].includes(method) && req.body) {
       fetchOptions.body = JSON.stringify(req.body);
     }
     
+    // Make the fetch request
+    console.log(`[PROXY] Sending request to backend...`);
     const response = await fetch(url, fetchOptions);
+    console.log(`[PROXY] Received response with status: ${response.status}`);
     
-    // Forward response headers
-    Object.entries(response.headers.raw()).forEach(([key, value]) => {
-      res.set(key, value);
-    });
+    // Set the status code
+    res.status(response.status);
     
-    if (response.status === 204) {
-      return res.status(204).end();
-    }
-    
-    const contentType = response.headers.get('content-type');
-    if (contentType && contentType.includes('application/json')) {
+    // Try to parse the response as JSON
+    try {
       const data = await response.json();
-      return res.status(response.status).json(data);
-    } else {
+      console.log(`[PROXY] Response data:`, JSON.stringify(data));
+      return res.json(data);
+    } catch (parseError) {
+      // If not JSON, try to get text
+      console.log(`[PROXY] Response is not JSON, fetching as text`);
       const text = await response.text();
-      return res.status(response.status).send(text);
+      console.log(`[PROXY] Response text:`, text);
+      return res.send(text);
     }
   } catch (error) {
-    console.error(`Proxy error: ${error.message}`);
-    res.status(500).json({ message: 'Error connecting to backend server', error: error.message });
+    console.error(`[PROXY] Error:`, error);
+    console.error(`[PROXY] Error stack:`, error.stack);
+    return res.status(500).json({ 
+      message: 'Error connecting to backend server', 
+      error: error.message,
+      stack: process.env.NODE_ENV !== 'production' ? error.stack : undefined
+    });
   }
 });
 
@@ -81,6 +97,16 @@ app.get('*', (req, res) => {
   res.sendFile(join(__dirname, 'dist', 'index.html'));
 });
 
+// Express error handler
+app.use((err, req, res, next) => {
+  console.error(`[ERROR] Unhandled error:`, err);
+  res.status(500).json({ 
+    message: 'Server error',
+    error: err.message,
+    stack: process.env.NODE_ENV !== 'production' ? err.stack : undefined
+  });
+});
+
 app.listen(PORT, () => {
-  console.log(`Frontend server running on port ${PORT}`);
+  console.log(`[SERVER] Frontend server running on port ${PORT}`);
 }); 
