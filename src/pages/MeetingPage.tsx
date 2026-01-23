@@ -27,8 +27,8 @@ export default function MeetingPage() {
     if (!container) return;
 
     try {
-      const appID = 197853467;
-      const serverSecret = "9ebb9ae4015eb573dc159922082a3a7a";
+      const appID = 100462474;
+      const serverSecret = "6cec6f74e98b1c53234c2e8a13fa5425";
 
       const kitToken = ZegoUIKitPrebuilt.generateKitTokenForTest(
         appID,
